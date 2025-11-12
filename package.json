@@ -1,0 +1,23 @@
+{
+  "name": "ai-travel-planner",
+  "version": "1.0.0",
+  "description": "AI 旅行规划软件",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build": "echo '构建完成'",
+    "test": "echo '测试'"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "firebase": "^10.7.1",
+    "axios": "^1.6.2"
+  },
+  "keywords": [
+    "travel",
+    "ai",
+    "planner"
+  ],
+  "author": "",
+  "license": "MIT"
+}

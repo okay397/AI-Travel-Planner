@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 旅行规划师</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px 0;
+            text-align: center;
+        }
+        .main-content {
+            background-color: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+        .input-section {
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .voice-button {
+            background-color: #2ecc71;
+            margin-left: 10px;
+        }
+        .voice-button:hover {
+            background-color: #27ae60;
+        }
+        .plan-result {
+            background-color: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .api-config {
+            background-color: #fff3cd;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+        }
+        .budget-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #ddd;
+        }
+        .map-container {
+            width: 100%;
+            height: 400px;
+            background-color: #eee;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>AI 旅行规划师</h1>
+        <p>智能规划您的完美旅程</p>
+    </header>
+
+    <div class="container">
+        <div class="main-content">
+            <!-- 用户认证 -->
+            <div class="auth-section">
+                <h2>用户登录/注册</h2>
+                <div class="form-group">
+                    <label for="email">邮箱</label>
+                    <input type="email" id="email" placeholder="请输入邮箱">
+                </div>
+                <div class="form-group">
+                    <label for="password">密码</label>
+                    <input type="password" id="password" placeholder="请输入密码">
+                </div>
+                <button id="loginBtn">登录</button>
+                <button id="registerBtn">注册</button>
+            </div>
+
+            <!-- 行程规划输入 -->
+            <div class="input-section">
+                <h2>旅行需求</h2>
+                <div class="form-group">
+                    <label for="destination">目的地</label>
+                    <input type="text" id="destination" placeholder="例如：日本东京">
+                    <button class="voice-button" onclick="startVoiceRecognition('destination')">🎤 语音输入</button>
+                </div>
+                <div class="form-group">
+                    <label for="days">旅行天数</label>
+                    <input type="number" id="days" placeholder="例如：5">
+                </div>
+                <div class="form-group">
+                    <label for="budget">预算（元）</label>
+                    <input type="number" id="budget" placeholder="例如：10000">
+                </div>
+                <div class="form-group">
+                    <label for="travelers">同行人数</label>
+                    <input type="number" id="travelers" placeholder="例如：2">
+                </div>
+                <div class="form-group">
+                    <label for="preferences">旅行偏好</label>
+                    <textarea id="preferences" rows="3" placeholder="例如：喜欢美食、动漫，带孩子"></textarea>
+                    <button class="voice-button" onclick="startVoiceRecognition('preferences')">🎤 语音输入</button>
+                </div>
+                <button id="planBtn">生成旅行计划</button>
+            </div>
+
+            <!-- 行程结果 -->
+            <div id="planResult" class="plan-result" style="display: none;">
+                <h2>旅行计划</h2>
+                <div id="planContent"></div>
+            </div>
+
+            <!-- 费用预算与管理 -->
+            <div class="expense-section">
+                <h2>费用预算与管理</h2>
+                
+                <!-- 费用记录表单 -->
+                <div class="expense-form" style="margin-bottom: 20px; padding: 15px; background-color: #f9f9f9; border-radius: 8px;">
+                    <h3 style="margin-top: 0;">添加费用记录</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px;">
+                        <div>
+                            <label for="expenseCategory" style="display: block; margin-bottom: 5px;">类别</label>
+                            <select id="expenseCategory" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <option value="餐饮">餐饮</option>
+                                <option value="交通">交通</option>
+                                <option value="住宿">住宿</option>
+                                <option value="购物">购物</option>
+                                <option value="景点">景点门票</option>
+                                <option value="其他">其他</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="expenseAmount" style="display: block; margin-bottom: 5px;">金额</label>
+                            <input type="number" id="expenseAmount" placeholder="例如：100" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+                        <div>
+                            <label for="expenseDate" style="display: block; margin-bottom: 5px;">日期</label>
+                            <input type="date" id="expenseDate" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label for="expenseDescription" style="display: block; margin-bottom: 5px;">描述</label>
+                        <input type="text" id="expenseDescription" placeholder="例如：午餐 - 当地特色餐厅" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="addExpenseBtn" style="padding: 8px 15px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            添加费用
+                        </button>
+                        <button id="voiceExpenseBtn" style="padding: 8px 15px; background-color: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            <i class="fas fa-microphone"></i> 语音输入费用
+                        </button>
+                    </div>
+                    <div id="expenseMessage" style="margin-top: 10px; padding: 10px; border-radius: 4px; display: none;"></div>
+                </div>
+                
+                <!-- 费用列表与预算分析 -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <!-- 费用列表 -->
+                    <div>
+                        <h3>费用记录列表</h3>
+                        <div id="expenseList" class="expense-list" style="max-height: 400px; overflow-y: auto; padding: 10px; background-color: #fff; border: 1px solid #ddd; border-radius: 8px;">
+                            <p style="color: #666; text-align: center;">暂无费用记录</p>
+                        </div>
+                    </div>
+                    
+                    <!-- 预算分析 -->
+                    <div>
+                        <h3>预算分析</h3>
+                        <div id="budgetAnalysis" style="padding: 15px; background-color: #fff; border: 1px solid #ddd; border-radius: 8px;">
+                            <div style="margin-bottom: 10px;">
+                                <p><strong>总预算：</strong><span id="totalBudget">0</span> 元</p>
+                                <p><strong>已花费：</strong><span id="totalExpenses">0</span> 元 ( <span id="percentageUsed">0</span>% )</p>
+                                <p><strong>剩余预算：</strong><span id="remainingBudget">0</span> 元</p>
+                                <p><strong>预算状态：</strong><span id="budgetStatus" class="budget-status-sufficient">预算充足</span></p>
+                            </div>
+                            
+                            <!-- 预算进度条 -->
+                            <div style="height: 20px; background-color: #e0e0e0; border-radius: 10px; margin: 15px 0;">
+                                <div id="budgetProgressBar" style="height: 100%; width: 0%; background-color: #4CAF50; transition: width 0.3s, background-color 0.3s;"></div>
+                            </div>
+                            
+                            <!-- 支出分类统计 -->
+                            <div>
+                                <h4>支出分类</h4>
+                                <div id="expenseCategories" style="display: flex; flex-wrap: wrap; gap: 10px;">
+                                    <p style="color: #666;">暂无支出数据</p>
+                                </div>
+                            </div>
+                            
+                            <!-- 建议 -->
+                            <div style="margin-top: 15px;">
+                                <h4>预算建议</h4>
+                                <ul id="budgetRecommendations" style="list-style: none; padding: 0; margin: 0;">
+                                    <li style="color: #666;">生成行程后可查看预算建议</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            <!-- 地图展示 -->
+            <div class="map-section">
+                <h2>行程地图</h2>
+                <div class="map-container" style="position: relative; width: 100%; height: 500px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9; overflow: hidden;">
+                    <div id="map" style="width: 100%; height: 100%;"></div>
+                    <div id="map-placeholder" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #666;">
+                        <i class="fas fa-map-marker-alt" style="font-size: 48px; margin-bottom: 15px;"></i>
+                        <p>地图将在这里显示</p>
+                        <p style="margin-top: 10px; font-size: 14px;">请先生成行程计划，或在API配置中设置地图服务</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 服务配置管理 -->
+            <div id="apiConfigSection" class="api-config">
+                <h3>服务配置管理</h3>
+                
+                <!-- AI 模型配置 -->
+                <div class="config-section" style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #ddd;">
+                    <h4>AI 模型配置</h4>
+                    <div style="margin-bottom: 10px;">
+                        <label for="aiProvider">服务提供商:</label>
+                        <select id="aiProvider" style="margin-left: 10px; padding: 5px;">
+                            <option value="mock">模拟模型（无需 API Key）</option>
+                            <option value="openai">OpenAI</option>
+                            <option value="aliyun">阿里云百炼</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label for="aiApiKey" style="display: inline-block; width: 100px;">API Key:</label>
+                        <input type="password" id="aiApiKey" placeholder="请输入 API Key" style="width: 300px; padding: 6px;">
+                    </div>
+                    <div id="openaiConfig" style="display: none; margin-bottom: 15px;">
+                        <label for="openaiModel" style="display: inline-block; width: 100px;">模型:</label>
+                        <select id="openaiModel" style="padding: 5px;">
+                            <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
+                            <option value="gpt-4">gpt-4</option>
+                        </select>
+                    </div>
+                    <div id="aliyunConfig" style="display: none; margin-bottom: 15px;">
+                        <label for="aliyunAppKey" style="display: inline-block; width: 100px;">App Key:</label>
+                        <input type="password" id="aliyunAppKey" placeholder="请输入阿里云 App Key" style="width: 300px; padding: 6px; margin-bottom: 10px;">
+                        <div style="margin-left: 105px;">
+                            <label for="aliyunModel">模型:</label>
+                            <select id="aliyunModel" style="padding: 5px;">
+                                <option value="qwen-plus">qwen-plus</option>
+                                <option value="qwen-max">qwen-max</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 语音识别配置 -->
+                <div class="config-section" style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #ddd;">
+                    <h4>语音识别配置</h4>
+                    <div style="margin-bottom: 10px;">
+                        <label for="voiceProvider">服务提供商:</label>
+                        <select id="voiceProvider" style="margin-left: 10px; padding: 5px;">
+                            <option value="browser">浏览器原生（无需 API Key）</option>
+                            <option value="iflytek">科大讯飞</option>
+                        </select>
+                    </div>
+                    <div id="iflytekConfig" style="display: none; margin-bottom: 15px;">
+                        <div style="margin-bottom: 10px;">
+                            <label for="voiceApiKey" style="display: inline-block; width: 100px;">App ID:</label>
+                            <input type="text" id="voiceApiKey" placeholder="请输入科大讯飞 App ID" style="width: 300px; padding: 6px;">
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <label for="voiceApiSecret" style="display: inline-block; width: 100px;">API Key:</label>
+                            <input type="password" id="voiceApiSecret" placeholder="请输入科大讯飞 API Key" style="width: 300px; padding: 6px;">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 地图服务配置 -->
+                <div class="config-section" style="margin-bottom: 20px;">
+                    <h4>地图服务配置</h4>
+                    <div style="margin-bottom: 10px;">
+                        <label for="mapProvider">服务提供商:</label>
+                        <select id="mapProvider" style="margin-left: 10px; padding: 5px;">
+                            <option value="none">暂不使用</option>
+                            <option value="amap">高德地图</option>
+                            <option value="baidu">百度地图</option>
+                        </select>
+                    </div>
+                    <div id="mapApiConfig" style="display: none; margin-bottom: 15px;">
+                        <label for="mapApiKey" style="display: inline-block; width: 100px;">API Key:</label>
+                        <input type="text" id="mapApiKey" placeholder="请输入地图 API Key" style="width: 300px; padding: 6px;">
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px; text-align: center;">
+                    <button id="saveApiKeysBtn" style="padding: 10px 25px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;">保存配置</button>
+                    <button id="testApiBtn" style="margin-left: 15px; padding: 10px 25px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;">测试连接</button>
+                </div>
+                <div id="configMessage" style="margin-top: 15px; padding: 10px; border-radius: 4px; display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { mockAuth } from './firebase.js';
+        import { aiService } from './ai-service.js';
+        // 语音识别功能 - 支持浏览器原生和科大讯飞 API
+        async function startVoiceRecognition(elementId) {
+            const voiceApiKey = localStorage.getItem('voiceApiKey');
+            
+            // 如果有科大讯飞 API Key，则使用科大讯飞 API
+            if (voiceApiKey && voiceApiKey.trim() !== '') {
+                await startIflytekVoiceRecognition(elementId, voiceApiKey);
+            } else {
+                // 否则使用浏览器原生语音识别
+                startBrowserVoiceRecognition(elementId);
+            }
+        }
+        
+        // 浏览器原生语音识别
+        function startBrowserVoiceRecognition(elementId) {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                alert('您的浏览器不支持语音识别功能，请尝试使用Chrome或Edge浏览器');
+                return;
+            }
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'zh-CN';
+            recognition.interimResults = false;
+            
+            // 找到对应的输入框和按钮
+            const inputElement = document.getElementById(elementId);
+            const voiceButton = inputElement?.nextElementSibling;
+            
+            if (voiceButton) {
+                voiceButton.innerHTML = '🎤 正在聆听...';
+                voiceButton.style.backgroundColor = '#e74c3c';
+            }
+
+            recognition.onstart = () => {
+                console.log('语音识别已开始');
+            };
+
+            recognition.onresult = (event) => {
+                const speechResult = event.results[0][0].transcript;
+                inputElement.value = speechResult;
+                
+                // 重置按钮状态
+                if (voiceButton) {
+                    voiceButton.innerHTML = '🎤 语音输入';
+                    voiceButton.style.backgroundColor = '#2ecc71';
+                }
+            };
+
+            recognition.onend = () => {
+                // 重置按钮状态
+                if (voiceButton) {
+                    voiceButton.innerHTML = '🎤 语音输入';
+                    voiceButton.style.backgroundColor = '#2ecc71';
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error('语音识别错误:', event.error);
+                alert('语音识别失败，请重试');
+                
+                // 重置按钮状态
+                if (voiceButton) {
+                    voiceButton.innerHTML = '🎤 语音输入';
+                    voiceButton.style.backgroundColor = '#2ecc71';
+                }
+            };
+
+            recognition.start();
+        }
+        
+        // 科大讯飞语音识别 API 集成（模拟）
+        async function startIflytekVoiceRecognition(elementId, apiKey) {
+            try {
+                const inputElement = document.getElementById(elementId);
+                const voiceButton = inputElement?.nextElementSibling;
+                
+                if (voiceButton) {
+                    voiceButton.innerHTML = '🎤 科大讯飞识别中...';
+                    voiceButton.style.backgroundColor = '#9b59b6';
+                }
+                
+                // 模拟科大讯飞 API 调用延迟
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // 模拟语音识别结果
+                const mockResults = [
+                    '我想去日本东京旅行',
+                    '五天时间，预算一万元',
+                    '喜欢美食和购物',
+                    '带两个孩子一起旅行'
+                ];
+                
+                const randomResult = mockResults[Math.floor(Math.random() * mockResults.length)];
+                inputElement.value = randomResult;
+                
+                // 重置按钮状态
+                if (voiceButton) {
+                    voiceButton.innerHTML = '🎤 语音输入';
+                    voiceButton.style.backgroundColor = '#2ecc71';
+                }
+                
+                alert('科大讯飞语音识别完成');
+            } catch (error) {
+                console.error('科大讯飞语音识别错误:', error);
+                alert('科大讯飞语音识别失败，请检查API Key');
+            }
+        }
+        
+        // 添加语音识别功能到费用管理部分
+        document.addEventListener('DOMContentLoaded', () => {
+            // 为费用项目添加语音输入按钮
+            const expenseItemInput = document.getElementById('expenseItem');
+            if (expenseItemInput) {
+                const voiceButton = document.createElement('button');
+                voiceButton.className = 'voice-button';
+                voiceButton.textContent = '🎤 语音输入';
+                voiceButton.onclick = () => startVoiceRecognition('expenseItem');
+                expenseItemInput.parentNode.appendChild(voiceButton);
+            }
+        });
+
+        // 生成旅行计划
+        document.getElementById('planBtn').addEventListener('click', async () => {
+            const destination = document.getElementById('destination').value;
+            const days = document.getElementById('days').value;
+            const budget = document.getElementById('budget').value;
+            const travelers = document.getElementById('travelers').value || '2';
+            const preferences = document.getElementById('preferences').value;
+
+            if (!destination || !days || !budget) {
+                alert('请填写必要的旅行信息（目的地、天数和预算）');
+                return;
+            }
+
+            // 显示加载状态
+            const planBtn = document.getElementById('planBtn');
+            const originalText = planBtn.textContent;
+            planBtn.textContent = '生成中...';
+            planBtn.disabled = true;
+
+            try {
+                // 使用 AI 服务生成旅行计划
+                const tripData = {
+                    destination,
+                    days: parseInt(days),
+                    budget: parseInt(budget),
+                    travelers: parseInt(travelers),
+                    preferences
+                };
+
+                const planData = await aiService.generateTripPlan(tripData);
+                
+                // 保存旅行计划到本地存储
+                if (mockAuth.currentUser) {
+                    // 这里可以集成到真实的数据库
+                    console.log('保存旅行计划:', planData);
+                    // 模拟保存
+                    const savedPlans = JSON.parse(localStorage.getItem('savedPlans') || '[]');
+                    savedPlans.push({
+                        id: Date.now().toString(),
+                        ...planData,
+                        savedAt: new Date().toISOString()
+                    });
+                    localStorage.setItem('savedPlans', JSON.stringify(savedPlans));
+                }
+
+                displayPlan(planData);
+            } catch (error) {
+                console.error('生成旅行计划失败:', error);
+                alert('生成旅行计划失败，请重试。如果您使用的是 API Key，请确保其有效性。');
+            } finally {
+                // 恢复按钮状态
+                planBtn.textContent = originalText;
+                planBtn.disabled = false;
+            }
+        });
+
+        // 显示旅行计划
+        function displayPlan(planData) {
+            const planResult = document.getElementById('planResult');
+            const planContent = document.getElementById('planContent');
+
+            let html = `
+                <h3>${planData.destination} - ${planData.days}天旅行计划</h3>
+                <p>预算: ${planData.budget}元 | 人数: ${planData.travelers}人</p>
+                <p>偏好: ${planData.preferences}</p>
+                ${planData.totalEstimatedCost ? `<p class="estimated-cost">预计总费用: <strong>${planData.totalEstimatedCost}元</strong></p>` : ''}
+                <hr>
+            `;
+
+            // 交通建议
+            if (planData.transportation) {
+                html += `
+                    <h4>交通建议</h4>
+                    <p>${planData.transportation}</p>
+                    <hr>
+                `;
+            }
+
+            // 每日行程
+            planData.plan.forEach(dayPlan => {
+                html += `
+                    <h4>第${dayPlan.day}天 ${dayPlan.dailyBudget ? `- 当日预算: ${dayPlan.dailyBudget}元` : ''}</h4>
+                    ${dayPlan.accommodation ? `<p class="accommodation">🏨 住宿: ${dayPlan.accommodation}</p>` : ''}
+                    <ul class="activity-list">
+                `;
+                
+                dayPlan.activities.forEach(activity => {
+                    html += `
+                        <li class="activity-item">
+                            <strong class="activity-time">${activity.time}</strong>
+                            <span class="activity-description">${activity.description}</span>
+                            ${activity.location ? `<span class="activity-location">📍 ${activity.location}</span>` : ''}
+                            ${activity.estimatedCost ? `<span class="activity-cost">💰 ${activity.estimatedCost}元</span>` : ''}
+                        </li>
+                    `;
+                });
+                
+                html += `</ul><hr>`;
+            });
+
+            // 旅行提示
+            if (planData.tips && planData.tips.length > 0) {
+                html += `
+                    <h4>旅行提示</h4>
+                    <ul class="tips-list">
+                `;
+                planData.tips.forEach(tip => {
+                    html += `<li class="tip-item">💡 ${tip}</li>`;
+                });
+                html += `</ul>`;
+            }
+
+            planContent.innerHTML = html;
+            planResult.style.display = 'block';
+            
+            // 添加一些样式
+            const style = document.createElement('style');
+            style.textContent = `
+                .activity-list {
+                    list-style: none;
+                    padding: 0;
+                }
+                .activity-item {
+                    padding: 10px;
+                    margin-bottom: 8px;
+                    background-color: #f8f9fa;
+                    border-radius: 6px;
+                    display: flex;
+                    flex-direction: column;
+                }
+                .activity-time {
+                    color: #3498db;
+                    font-size: 18px;
+                }
+                .activity-description {
+                    font-weight: 500;
+                    margin: 5px 0;
+                }
+                .activity-location, .activity-cost {
+                    font-size: 14px;
+                    color: #666;
+                    margin-top: 3px;
+                }
+                .accommodation {
+                    background-color: #e3f2fd;
+                    padding: 8px;
+                    border-radius: 4px;
+                    font-weight: 500;
+                }
+                .tips-list {
+                    list-style: none;
+                    padding: 0;
+                }
+                .tip-item {
+                    padding: 8px;
+                    margin-bottom: 5px;
+                    background-color: #fff3cd;
+                    border-radius: 4px;
+                }
+                .estimated-cost {
+                    font-size: 18px;
+                    color: #e74c3c;
+                }
+            `;
+            document.head.appendChild(style);
+            
+            // 在地图上标记行程路线
+            if (window.mapService) {
+                mapService.markTripRoute(planData).catch(error => {
+                    console.error('地图标记失败:', error);
+                });
+            } else {
+                console.log('地图服务未加载，无法标记行程路线');
+            }
+        }
+
+        // 添加费用
+        document.getElementById('addExpenseBtn').addEventListener('click', () => {
+            const item = document.getElementById('expenseItem').value;
+            const amount = document.getElementById('expenseAmount').value;
+
+            if (!item || !amount) {
+                alert('请填写费用信息');
+                return;
+            }
+
+            const expenseList = document.getElementById('expenseList');
+            const expenseItem = document.createElement('div');
+            expenseItem.className = 'budget-item';
+            expenseItem.innerHTML = `
+                <span>${item}</span>
+                <span>¥${amount}</span>
+            `;
+            expenseList.appendChild(expenseItem);
+
+            // 清空输入
+            document.getElementById('expenseItem').value = '';
+            document.getElementById('expenseAmount').value = '';
+        });
+
+        // API 配置相关功能
+        function initApiConfig() {
+            // 加载保存的配置
+            const savedConfig = JSON.parse(localStorage.getItem('apiConfig') || '{}');
+            
+            // 设置选择器的值
+            if (savedConfig.aiProvider) document.getElementById('aiProvider').value = savedConfig.aiProvider;
+            if (savedConfig.voiceProvider) document.getElementById('voiceProvider').value = savedConfig.voiceProvider;
+            if (savedConfig.mapProvider) document.getElementById('mapProvider').value = savedConfig.mapProvider;
+            
+            // 设置 API Key（注意：密码字段不自动填充以保护安全）
+            // 设置其他配置
+            if (savedConfig.openaiModel) document.getElementById('openaiModel').value = savedConfig.openaiModel;
+            if (savedConfig.aliyunModel) document.getElementById('aliyunModel').value = savedConfig.aliyunModel;
+            
+            // 处理服务提供商切换
+            document.getElementById('aiProvider').addEventListener('change', updateAIConfigVisibility);
+            document.getElementById('voiceProvider').addEventListener('change', updateVoiceConfigVisibility);
+            document.getElementById('mapProvider').addEventListener('change', updateMapConfigVisibility);
+            
+            // 初始更新可见性
+            updateAIConfigVisibility();
+            updateVoiceConfigVisibility();
+            updateMapConfigVisibility();
+            
+            // 保存配置按钮事件
+            document.getElementById('saveApiKeysBtn').addEventListener('click', saveConfig);
+            
+            // 测试连接按钮事件
+            document.getElementById('testApiBtn').addEventListener('click', testConnection);
+        }
+        
+        function updateAIConfigVisibility() {
+            const provider = document.getElementById('aiProvider').value;
+            document.getElementById('openaiConfig').style.display = provider === 'openai' ? 'block' : 'none';
+            document.getElementById('aliyunConfig').style.display = provider === 'aliyun' ? 'block' : 'none';
+            // 根据不同提供商调整 API Key 标签和显示选项
+        const apiKeyLabel = provider === 'openai' ? 'API Key:' :
+            provider === 'aliyun' ? 'Access Key:' : 'API Key:';
+        document.querySelector('label[for="aiApiKey"]').textContent = apiKeyLabel;
+        
+        // 更新模型列表
+        if (provider === 'openai' || provider === 'aliyun') {
+            const modelSelect = provider === 'openai' ? document.getElementById('openaiModel') : document.getElementById('aliyunModel');
+            // 清空现有选项
+            modelSelect.innerHTML = '';
+            
+            // 获取可用模型列表
+            const models = aiService.getAvailableModels();
+            models.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model.value;
+                option.textContent = model.label;
+                modelSelect.appendChild(option);
+            });
+        }
+        }
+        
+        function updateVoiceConfigVisibility() {
+            const provider = document.getElementById('voiceProvider').value;
+            document.getElementById('iflytekConfig').style.display = provider === 'iflytek' ? 'block' : 'none';
+        }
+        
+        function updateMapConfigVisibility() {
+            const provider = document.getElementById('mapProvider').value;
+            document.getElementById('mapApiConfig').style.display = provider !== 'none' ? 'block' : 'none';
+        }
+        
+        function saveConfig() {
+            const config = {
+                aiProvider: document.getElementById('aiProvider').value,
+                voiceProvider: document.getElementById('voiceProvider').value,
+                mapProvider: document.getElementById('mapProvider').value,
+                openaiModel: document.getElementById('openaiModel').value,
+                aliyunModel: document.getElementById('aliyunModel').value
+            };
+            
+            // 保存敏感信息
+            const aiApiKey = document.getElementById('aiApiKey').value;
+            const voiceApiKey = document.getElementById('voiceApiKey').value;
+            const voiceApiSecret = document.getElementById('voiceApiSecret').value;
+            const mapApiKey = document.getElementById('mapApiKey').value;
+            const aliyunAppKey = document.getElementById('aliyunAppKey').value;
+            
+            // 保存到 localStorage
+            if (aiApiKey) localStorage.setItem('aiApiKey', aiApiKey);
+            if (voiceApiKey) localStorage.setItem('voiceApiKey', voiceApiKey);
+            if (voiceApiSecret) localStorage.setItem('voiceApiSecret', voiceApiSecret);
+            if (mapApiKey) localStorage.setItem('mapApiKey', mapApiKey);
+            if (aliyunAppKey) localStorage.setItem('aliyunAppKey', aliyunAppKey);
+            
+            // 更新 AI 服务配置
+            const aiConfig = {
+                apiKey: aiApiKey,
+                provider: config.aiProvider,
+                modelName: config.aiProvider === 'openai' ? config.openaiModel : config.aliyunModel,
+                aliyunAppKey: aliyunAppKey
+            };
+            aiService.updateConfig(aiConfig);
+            
+            // 保存配置
+            localStorage.setItem('apiConfig', JSON.stringify(config));
+            
+            showConfigMessage('配置已成功保存！', 'success');
+        }
+        
+        async function testConnection() {
+            const configMessage = document.getElementById('configMessage');
+            configMessage.textContent = '正在测试连接...';
+            configMessage.className = 'testing';
+            configMessage.style.display = 'block';
+            configMessage.style.backgroundColor = '#e3f2fd';
+            configMessage.style.color = '#1976d2';
+            
+            try {
+                // 获取当前配置
+                const aiConfig = {
+                    apiKey: document.getElementById('aiApiKey').value,
+                    provider: document.getElementById('aiProvider').value,
+                    modelName: document.getElementById('aiProvider').value === 'openai' ? 
+                        document.getElementById('openaiModel').value : 
+                        document.getElementById('aliyunModel').value,
+                    aliyunAppKey: document.getElementById('aliyunAppKey').value
+                };
+                
+                // 如果有 API Key，先更新配置
+                if (aiConfig.apiKey) {
+                    aiService.updateConfig(aiConfig);
+                }
+                
+                // 调用 AI 服务的测试连接方法
+                const result = await aiService.testConnection();
+                
+                if (result.success) {
+                    showConfigMessage(result.message, 'success');
+                } else {
+                    showConfigMessage('连接测试失败: ' + result.message, 'error');
+                }
+            } catch (error) {
+                showConfigMessage('测试过程中发生错误: ' + error.message, 'error');
+            }
+        }
+        
+        function showConfigMessage(message, type) {
+            const configMessage = document.getElementById('configMessage');
+            configMessage.textContent = message;
+            configMessage.style.display = 'block';
+            
+            if (type === 'success') {
+                configMessage.style.backgroundColor = '#d4edda';
+                configMessage.style.color = '#155724';
+            } else if (type === 'error') {
+                configMessage.style.backgroundColor = '#f8d7da';
+                configMessage.style.color = '#721c24';
+            }
+            
+            // 3秒后自动隐藏消息
+            setTimeout(() => {
+                configMessage.style.display = 'none';
+            }, 3000);
+        }
+        
+        // 初始化 API 配置
+        initApiConfig();
+
+        // 页面加载时从 localStorage 读取 API Key 和用户认证状态
+        window.addEventListener('load', () => {
+            const aiApiKey = localStorage.getItem('aiApiKey');
+            const voiceApiKey = localStorage.getItem('voiceApiKey');
+            const mapApiKey = localStorage.getItem('mapApiKey');
+
+            if (aiApiKey) document.getElementById('aiApiKey').value = aiApiKey;
+            if (voiceApiKey) document.getElementById('voiceApiKey').value = voiceApiKey;
+            if (mapApiKey) document.getElementById('mapApiKey').value = mapApiKey;
+            
+            // 检查用户认证状态
+            checkAuthStatus();
+        });
+        
+        // 检查用户认证状态
+        function checkAuthStatus() {
+            const user = mockAuth.checkAuth();
+            updateUIForAuth(user);
+        }
+        
+        // 更新 UI 以反映认证状态
+        function updateUIForAuth(user) {
+            const authSection = document.querySelector('.auth-section');
+            const inputSection = document.querySelector('.input-section');
+            const budgetSection = document.querySelector('.budget-section');
+            
+            if (user) {
+                // 用户已登录
+                authSection.innerHTML = `
+                    <h2>已登录</h2>
+                    <p>欢迎，${user.email}</p>
+                    <button id="logoutBtn">退出登录</button>
+                `;
+                
+                // 启用功能区域
+                inputSection.style.display = 'block';
+                budgetSection.style.display = 'block';
+                
+                // 添加退出登录事件监听器
+                document.getElementById('logoutBtn').addEventListener('click', async () => {
+                    await mockAuth.logout();
+                    checkAuthStatus();
+                });
+                
+                // 加载保存的旅行计划
+                loadSavedTripPlans();
+            } else {
+                // 用户未登录
+                authSection.innerHTML = `
+                    <h2>用户登录/注册</h2>
+                    <div class="form-group">
+                        <label for="email">邮箱</label>
+                        <input type="email" id="email" placeholder="请输入邮箱">
+                    </div>
+                    <div class="form-group">
+                        <label for="password">密码</label>
+                        <input type="password" id="password" placeholder="请输入密码">
+                    </div>
+                    <button id="loginBtn">登录</button>
+                    <button id="registerBtn">注册</button>
+                `;
+                
+                // 禁用功能区域
+                inputSection.style.display = 'none';
+                budgetSection.style.display = 'none';
+                
+                // 添加登录和注册事件监听器
+                document.getElementById('loginBtn').addEventListener('click', handleLogin);
+                document.getElementById('registerBtn').addEventListener('click', handleRegister);
+            }
+        }
+        
+        // 处理登录
+        async function handleLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            const result = await mockAuth.login(email, password);
+            if (result.success) {
+                alert('登录成功！');
+                checkAuthStatus();
+            } else {
+                alert('登录失败：' + result.error);
+            }
+        }
+        
+        // 处理注册
+        async function handleRegister() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            const result = await mockAuth.register(email, password);
+            if (result.success) {
+                alert('注册成功！');
+                checkAuthStatus();
+            } else {
+                alert('注册失败：' + result.error);
+            }
+        }
+        
+        // 加载保存的旅行计划
+        async function loadSavedTripPlans() {
+            // 这里会集成从数据库加载旅行计划的逻辑
+            console.log('加载保存的旅行计划...');
+        }
+        
+        // 费用预算与管理功能
+        // 初始化费用管理
+        function initExpenseManagement() {
+            // 设置费用记录默认日期为今天
+            const expenseDateEl = document.getElementById('expenseDate');
+            if (expenseDateEl) {
+                expenseDateEl.value = new Date().toISOString().split('T')[0];
+            }
+            
+            // 加载保存的费用记录
+            loadExpenses();
+            
+            // 绑定添加费用按钮点击事件
+            const addExpenseBtn = document.getElementById('addExpenseBtn');
+            if (addExpenseBtn) {
+                // 先移除旧的事件监听器
+                const newAddExpenseBtn = addExpenseBtn.cloneNode(true);
+                addExpenseBtn.parentNode.replaceChild(newAddExpenseBtn, addExpenseBtn);
+                newAddExpenseBtn.addEventListener('click', addExpense);
+            }
+            
+            // 绑定语音输入费用按钮点击事件
+            const voiceExpenseBtn = document.getElementById('voiceExpenseBtn');
+            if (voiceExpenseBtn) {
+                voiceExpenseBtn.addEventListener('click', voiceInputExpense);
+            }
+        }
+        
+        // 加载费用记录
+        function loadExpenses() {
+            const expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
+            const currentTrip = JSON.parse(localStorage.getItem('currentTrip') || 'null');
+            
+            if (currentTrip) {
+                updateBudgetInfo(currentTrip.budget);
+            }
+            
+            if (expenses.length > 0) {
+                renderExpenseList(expenses);
+                calculateBudgetAnalysis(expenses, currentTrip?.budget || 0);
+            }
+        }
+        
+        // 更新预算信息
+        function updateBudgetInfo(budget) {
+            const totalBudgetEl = document.getElementById('totalBudget');
+            if (totalBudgetEl) {
+                totalBudgetEl.textContent = budget;
+            }
+            
+            // 重新计算预算分析
+            const expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
+            calculateBudgetAnalysis(expenses, budget);
+        }
+        
+        // 添加费用记录
+        function addExpense() {
+            const category = document.getElementById('expenseCategory')?.value;
+            const amount = parseFloat(document.getElementById('expenseAmount')?.value);
+            const date = document.getElementById('expenseDate')?.value;
+            const description = document.getElementById('expenseDescription')?.value;
+            
+            // 验证输入
+            if (!amount || amount <= 0) {
+                showExpenseMessage('请输入有效金额', 'error');
+                return;
+            }
+            
+            if (!date) {
+                showExpenseMessage('请选择日期', 'error');
+                return;
+            }
+            
+            // 创建费用记录
+            const expense = {
+                id: Date.now().toString(),
+                category,
+                amount,
+                date,
+                description,
+                createdAt: new Date().toISOString()
+            };
+            
+            // 保存到localStorage
+            const expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
+            expenses.push(expense);
+            localStorage.setItem('expenses', JSON.stringify(expenses));
+            
+            // 更新UI
+            renderExpenseList(expenses);
+            
+            // 更新预算分析
+            const currentTrip = JSON.parse(localStorage.getItem('currentTrip') || 'null');
+            calculateBudgetAnalysis(expenses, currentTrip?.budget || 0);
+            
+            // 重置表单
+            if (document.getElementById('expenseAmount')) {
+                document.getElementById('expenseAmount').value = '';
+            }
+            if (document.getElementById('expenseDescription')) {
+                document.getElementById('expenseDescription').value = '';
+            }
+            
+            showExpenseMessage('费用记录已添加', 'success');
+        }
+        
+        // 渲染费用列表
+        function renderExpenseList(expenses) {
+            const expenseList = document.getElementById('expenseList');
+            if (!expenseList) return;
+            
+            if (expenses.length === 0) {
+                expenseList.innerHTML = '<p style="color: #666; text-align: center;">暂无费用记录</p>';
+                return;
+            }
+            
+            // 按日期排序，最新的在前面
+            const sortedExpenses = expenses.sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            let html = '';
+            sortedExpenses.forEach(expense => {
+                html += `
+                    <div style="padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span style="background-color: #${getCategoryColor(expense.category)}20; color: #${getCategoryColor(expense.category)}; padding: 2px 8px; border-radius: 12px; font-size: 12px;">${expense.category}</span>
+                                <span>${formatDate(expense.date)}</span>
+                            </div>
+                            <p style="margin: 5px 0; font-size: 14px;">${expense.description || '无描述'}</p>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-weight: bold; font-size: 16px;">${expense.amount} 元</span>
+                            <button onclick="deleteExpense('${expense.id}')" style="background-color: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
+                                删除
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            expenseList.innerHTML = html;
+        }
+        
+        // 删除费用记录
+        window.deleteExpense = function(id) {
+            if (confirm('确定要删除这条费用记录吗？')) {
+                let expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
+                expenses = expenses.filter(expense => expense.id !== id);
+                localStorage.setItem('expenses', JSON.stringify(expenses));
+                
+                renderExpenseList(expenses);
+                
+                // 更新预算分析
+                const currentTrip = JSON.parse(localStorage.getItem('currentTrip') || 'null');
+                calculateBudgetAnalysis(expenses, currentTrip?.budget || 0);
+            }
+        };
+        
+        // 计算预算分析
+        function calculateBudgetAnalysis(expenses, budget) {
+            // 如果有行程计划，则使用aiService进行分析
+            if (window.aiService && budget > 0) {
+                aiService.analyzeBudget({ budget }, expenses)
+                    .then(analysis => {
+                        renderBudgetAnalysis(analysis);
+                    })
+                    .catch(error => {
+                        console.error('预算分析失败:', error);
+                    });
+            }
+        }
+        
+        // 渲染预算分析
+        function renderBudgetAnalysis(analysis) {
+            // 更新基础信息
+            const totalExpensesEl = document.getElementById('totalExpenses');
+            const percentageUsedEl = document.getElementById('percentageUsed');
+            const remainingBudgetEl = document.getElementById('remainingBudget');
+            const budgetStatusEl = document.getElementById('budgetStatus');
+            const budgetProgressBarEl = document.getElementById('budgetProgressBar');
+            const categoriesEl = document.getElementById('expenseCategories');
+            const recommendationsEl = document.getElementById('budgetRecommendations');
+            
+            if (totalExpensesEl) totalExpensesEl.textContent = analysis.totalExpenses;
+            if (percentageUsedEl) percentageUsedEl.textContent = analysis.percentageUsed.toFixed(1);
+            if (remainingBudgetEl) remainingBudgetEl.textContent = analysis.remainingBudget;
+            if (budgetStatusEl) budgetStatusEl.textContent = analysis.budgetStatus;
+            
+            // 更新预算状态样式
+            if (budgetStatusEl) {
+                budgetStatusEl.className = '';
+                if (analysis.percentageUsed > 90) {
+                    budgetStatusEl.style.color = '#f44336';
+                } else if (analysis.percentageUsed > 70) {
+                    budgetStatusEl.style.color = '#ff9800';
+                } else {
+                    budgetStatusEl.style.color = '#4CAF50';
+                }
+            }
+            
+            // 更新进度条
+            if (budgetProgressBarEl) {
+                budgetProgressBarEl.style.width = `${Math.min(analysis.percentageUsed, 100)}%`;
+                if (analysis.percentageUsed > 90) {
+                    budgetProgressBarEl.style.backgroundColor = '#f44336';
+                } else if (analysis.percentageUsed > 70) {
+                    budgetProgressBarEl.style.backgroundColor = '#ff9800';
+                } else {
+                    budgetProgressBarEl.style.backgroundColor = '#4CAF50';
+                }
+            }
+            
+            // 渲染支出分类
+            if (categoriesEl) {
+                if (Object.keys(analysis.expenseCategories).length > 0) {
+                    let categoriesHtml = '';
+                    Object.entries(analysis.expenseCategories).forEach(([category, amount]) => {
+                        const percentage = ((amount / analysis.totalExpenses) * 100).toFixed(1);
+                        categoriesHtml += `
+                            <div style="background-color: #${getCategoryColor(category)}20; padding: 8px; border-radius: 6px;">
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span>${category}</span>
+                                    <span><strong>${amount} 元</strong> (${percentage}%)</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    categoriesEl.innerHTML = categoriesHtml;
+                } else {
+                    categoriesEl.innerHTML = '<p style="color: #666;">暂无支出数据</p>';
+                }
+            }
+            
+            // 渲染建议
+            if (recommendationsEl) {
+                if (analysis.recommendations && analysis.recommendations.length > 0) {
+                    let recommendationsHtml = '';
+                    analysis.recommendations.forEach(rec => {
+                        recommendationsHtml += `<li style="margin-bottom: 5px; padding-left: 20px; position: relative;">
+                            <span style="position: absolute; left: 0; color: #4CAF50;">•</span>
+                            ${rec}
+                        </li>`;
+                    });
+                    recommendationsEl.innerHTML = recommendationsHtml;
+                }
+            }
+        }
+        
+        // 语音输入费用
+        function voiceInputExpense() {
+            if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+                showExpenseMessage('您的浏览器不支持语音识别功能', 'error');
+                return;
+            }
+            
+            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'zh-CN';
+            recognition.interimResults = false;
+            
+            showExpenseMessage('请说出费用信息，例如："餐饮，午餐，100元，2024-01-15"', 'info');
+            
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                console.log('语音识别结果:', transcript);
+                
+                // 解析语音输入
+                parseVoiceExpenseInput(transcript);
+            };
+            
+            recognition.onerror = function(event) {
+                showExpenseMessage('语音识别失败，请重试', 'error');
+                console.error('语音识别错误:', event.error);
+            };
+            
+            recognition.start();
+        }
+        
+        // 解析语音输入的费用信息
+        function parseVoiceExpenseInput(text) {
+            try {
+                // 简单的解析逻辑
+                const categoryMap = {
+                    '餐饮': ['餐饮', '吃饭', '午餐', '晚餐', '早餐', '饭', '餐'],
+                    '交通': ['交通', '打车', '公交', '地铁', '火车', '飞机'],
+                    '住宿': ['住宿', '酒店', '宾馆'],
+                    '购物': ['购物', '买', '商品'],
+                    '景点': ['景点', '门票', '参观'],
+                    '其他': ['其他']
+                };
+                
+                let category = '其他';
+                let amount = 0;
+                let description = '';
+                
+                // 提取金额
+                const amountMatch = text.match(/(\d+)元/);
+                if (amountMatch) {
+                    amount = parseFloat(amountMatch[1]);
+                }
+                
+                // 提取类别
+                for (const [key, values] of Object.entries(categoryMap)) {
+                    for (const value of values) {
+                        if (text.includes(value)) {
+                            category = key;
+                            // 提取描述
+                            const parts = text.split(value);
+                            if (parts.length > 1) {
+                                description = parts[1].replace(/\d+元/g, '').trim();
+                            }
+                            break;
+                        }
+                    }
+                }
+                
+                // 填充表单
+                if (category && document.getElementById('expenseCategory')) {
+                    document.getElementById('expenseCategory').value = category;
+                }
+                if (amount && document.getElementById('expenseAmount')) {
+                    document.getElementById('expenseAmount').value = amount;
+                }
+                if (description && document.getElementById('expenseDescription')) {
+                    document.getElementById('expenseDescription').value = description;
+                }
+                
+                showExpenseMessage('语音输入已识别，请确认信息无误后点击添加', 'success');
+            } catch (error) {
+                showExpenseMessage('无法解析语音输入，请尝试其他格式', 'error');
+            }
+        }
+        
+        // 显示费用相关消息
+        function showExpenseMessage(message, type) {
+            const messageEl = document.getElementById('expenseMessage');
+            if (!messageEl) return;
+            
+            messageEl.textContent = message;
+            messageEl.style.display = 'block';
+            
+            // 设置样式
+            if (type === 'success') {
+                messageEl.style.backgroundColor = '#d4edda';
+                messageEl.style.color = '#155724';
+            } else if (type === 'error') {
+                messageEl.style.backgroundColor = '#f8d7da';
+                messageEl.style.color = '#721c24';
+            } else if (type === 'info') {
+                messageEl.style.backgroundColor = '#d1ecf1';
+                messageEl.style.color = '#0c5460';
+            }
+            
+            // 3秒后自动隐藏
+            setTimeout(() => {
+                messageEl.style.display = 'none';
+            }, 3000);
+        }
+        
+        // 获取类别对应的颜色
+        function getCategoryColor(category) {
+            const colors = {
+                '餐饮': 'FF6B6B',
+                '交通': '4ECDC4',
+                '住宿': '45B7D1',
+                '购物': '96CEB4',
+                '景点': 'FFEAA7',
+                '其他': 'DDA0DD'
+            };
+            return colors[category] || 'CCCCCC';
+        }
+        
+        // 格式化日期
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+        }
+        
+        // 保存行程计划时更新预算信息
+        function saveTripPlan(plan) {
+            // 这里实现行程计划的保存逻辑
+            const savedPlans = JSON.parse(localStorage.getItem('savedTripPlans') || '[]');
+            savedPlans.push({
+                id: Date.now().toString(),
+                name: `${plan.destination} - ${new Date().toLocaleDateString()}`,
+                plan: plan,
+                savedAt: new Date().toISOString()
+            });
+            localStorage.setItem('savedTripPlans', JSON.stringify(savedPlans));
+            alert('行程计划已保存！');
+            
+            // 更新预算信息
+            updateBudgetInfo(plan.budget);
+        }
+        
+        // 页面加载完成后初始化费用管理
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initExpenseManagement);
+        } else {
+            initExpenseManagement();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+version: '3'
+
+services:
+  ai-travel-planner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  # 如果应用程序需要持久化数据，可以在这里定义卷
+  # 例如：数据文件、日志等
+  # app-data:
