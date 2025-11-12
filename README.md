@@ -62,7 +62,25 @@
    ```
 4. 打开浏览器访问：`http://localhost:3000`
 
-### 方法三：直接运行
+### 方法三：使用脚本构建并导出镜像
+
+项目中提供了自动化脚本来构建并导出Docker镜像：
+
+**在Windows上：**
+1. 确保已安装 Docker Desktop 并运行
+2. 双击运行 `build-and-export-image.bat` 文件
+3. 脚本将自动构建镜像并导出为 `ai-travel-planner-latest.tar` 文件
+
+**在Linux/Mac上：**
+1. 确保已安装 Docker 并运行
+2. 执行命令：
+   ```bash
+   chmod +x build-and-export-image.sh
+   ./build-and-export-image.sh
+   ```
+3. 脚本将自动构建镜像并导出为 `ai-travel-planner-latest.tar` 文件
+
+### 方法四：直接运行
 
 1. 确保已安装 Node.js 14 或更高版本
 2. 安装依赖：
@@ -74,6 +92,52 @@
    npm start
    ```
 4. 打开浏览器访问：`http://localhost:3000`
+
+## Docker 镜像使用指南
+
+### 提供可下载的 Docker 镜像文件
+
+您可以通过以下步骤提供可直接下载运行的 Docker 镜像文件：
+
+1. 运行项目中的构建脚本（Windows下运行 `build-and-export-image.bat`，Linux/Mac下运行 `build-and-export-image.sh`）
+2. 脚本执行完成后，会在项目根目录生成 `ai-travel-planner-latest.tar` 文件
+3. 此 tar 文件即为可下载的 Docker 镜像文件，其他人可以通过它直接加载和使用应用
+
+### 在另一台机器上加载和运行镜像
+
+要在其他机器上使用此 Docker 镜像文件：
+
+1. 将 `ai-travel-planner-latest.tar` 文件复制到目标机器
+2. 在目标机器上打开命令行工具
+3. 加载 Docker 镜像：
+   ```bash
+   docker load -i ai-travel-planner-latest.tar
+   ```
+4. 运行容器：
+   ```bash
+   docker run -d -p 3000:3000 --name ai-travel-planner ai-travel-planner:latest
+   ```
+5. 打开浏览器访问：http://localhost:3000
+
+### 验证容器是否正常运行
+
+```bash
+# 查看容器状态
+docker ps
+
+# 查看容器日志
+docker logs ai-travel-planner
+```
+
+### 停止和删除容器
+
+```bash
+# 停止容器
+docker stop ai-travel-planner
+
+# 删除容器
+docker rm ai-travel-planner
+```
 
 ## API Key 配置
 
